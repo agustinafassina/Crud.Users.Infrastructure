@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  crud.user.api:
+    image: crud.user.api
+    ports:
+     - 3000:80
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Testing
+
+  crud.user.ui:
+    image: crud.user.ui
+    ports:
+      - 3001:80
+    restart: always
+    depends_on:
+      - crud.user.api
+    environment:
+      - Environment=Testing

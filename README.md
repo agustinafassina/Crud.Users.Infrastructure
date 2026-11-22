@@ -42,32 +42,27 @@ git clone https://github.com/agustinafassina/Crud.Users.Ui.git
 git clone https://github.com/agustinafassina/Crud.Users.Infrastructure.git
 ```
 
-### 2️⃣ Build the Docker images
-Docker Compose uses local images with fixed names. Build each service from its own repository **before** starting the stack.
-
-**API** (from `Crud.Users.Api/`):
+### 2️⃣ Configure the environment
+From `Crud.Users.Infrastructure/`, create your local `.env` (it is git-ignored):
 
 ```bash
-cd Crud.Users.Api
-docker build -f Dockerfile -t crud.user.api .
+cd Crud.Users.Infrastructure
+cp .env.example .env
 ```
 
-**UI** (from `Crud.Users.Ui/`):
+| Variable | Description |
+|----------|-------------|
+| `SQL_SA_PASSWORD` | SQL Server `sa` password (min 8 chars, upper + lower + digit + symbol) |
+| `JWT_SECRET_KEY` | JWT signing key (at least 32 characters) |
+
+### 3️⃣ Build and start the stack
+Docker Compose builds the API and UI images from the sibling folders (`../Crud.Users.Api` and `../Crud.Users.Ui`) and starts SQL Server and MongoDB:
 
 ```bash
-cd ../Crud.Users.Ui
-docker build -f Dockerfile -t crud.user.ui .
+docker compose up -d --build
 ```
 
-> The tags `crud.user.api` and `crud.user.ui` must match exactly those defined in `docker-compose.yml`.
-
-### 3️⃣ Start the stack
-From `Crud.Users.Infrastructure/`:
-
-```bash
-cd ../Crud.Users.Infrastructure
-docker compose up -d
-```
+On startup the API applies the EF Core migrations to SQL Server automatically.
 
 To view logs in real time:
 
@@ -80,9 +75,12 @@ docker compose up
 |---------|-------|------------|----------------------|
 | API | `crud.user.api` | [http://localhost:3000](http://localhost:3000) | `ASPNETCORE_ENVIRONMENT=Testing` |
 | UI | `crud.user.ui` | [http://localhost:3001](http://localhost:3001) | `Environment=Testing` |
+| SQL Server | `mcr.microsoft.com/mssql/server:2022-latest` | `localhost:1433` | `MSSQL_SA_PASSWORD` |
+| MongoDB | `mongo:7` | `localhost:27017` | — |
 
 - API Swagger: [http://localhost:3000/swagger/index.html](http://localhost:3000/swagger/index.html)
-- The UI depends on the API (`depends_on: crud.user.api`).
+- The API waits for SQL Server and MongoDB to be healthy before starting.
+- Data is persisted in the `sqlserver-data` and `mongo-data` volumes (`docker compose down -v` deletes it).
 
 ## 💻 Useful commands
 ```bash
@@ -96,11 +94,12 @@ docker compose ps
 docker compose logs -f
 
 # Rebuild images and start again
-# (run docker build in Api and Ui, then:)
-docker compose up -d --force-recreate
+docker compose up -d --build
+
+# Rebuild a single service
+docker compose up -d --build crud.user.api
 ```
 
 ## 🔄 Development workflow
 1. Make changes in **Crud.Users.Api** or **Crud.Users.Ui**.
-2. Rebuild the modified service image (`docker build ...`).
-3. Restart the stack from this repository (`docker compose up -d --force-recreate`).
+2. From this repository, rebuild and restart the modified service (`docker compose up -d --build <service>`).
